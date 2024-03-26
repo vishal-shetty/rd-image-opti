@@ -7,16 +7,15 @@ import com.microsoft.azure.functions.annotation.*;
 public class ThumbnailFunction {
 
   @FunctionName("BlobTrigger")
-  //@StorageAccount("AzureWebJobsStorage")
+  @StorageAccount("AzureWebJobsStorage")
     public void BlobTriggerToBlobTest(
-        @BlobTrigger(name = "file",
-               dataType = "binary",
-               path = "northshirecc-qa-images/{name}",
-               connection = "AzureWebJobsStorage") byte[] content,
-  @BindingName("name") String filename,
+        @EventGridTrigger(name = "event") EventGridEvent eventGridEvent,
+        @BindingName("name") String fileName,
+        @BlobInput(name = "input", dataType = "binary", path = "{data.url}") byte[] input,
+        @BindingName("data.url") String blobUrl,
         final ExecutionContext context
     ) {
-        context.getLogger().info("Name: " + filename + " Size: " + content.length + " bytes");
+        context.getLogger().info("Java Blob trigger function BlobTriggerToBlobTest processed a blob.\n Name: " + fileName + "\n Size: " + input.length + " Bytes");
     }
 
 }
