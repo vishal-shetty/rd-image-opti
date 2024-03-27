@@ -60,6 +60,7 @@ public class ThumbnailFunction {
 
       // Logic for image optimization
       InputStream optimizeImage = optimizeImage(imgFile, fileName, logger);
+      logger.info("optimized image :: " + optimizeImage.toString());
       long optimizedImageContentLength = getOptimizedImageContentLength(optimizeImage);
       logger.info("optimizedImageContentLength :: " + optimizedImageContentLength);
 
@@ -95,7 +96,7 @@ public class ThumbnailFunction {
     // Set the image write parameters to optimize the image quality
     ImageWriteParam writeParam = writer.getDefaultWriteParam();
     writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-    writeParam.setCompressionQuality(0.8f); // Adjust the quality setting as needed
+    writeParam.setCompressionQuality(Float.valueOf(compressionQuality)); // Adjust the quality setting as needed
 
     // Write the optimized image to the output stream
     writer.setOutput(ios);
@@ -105,7 +106,8 @@ public class ThumbnailFunction {
     writer.dispose();
     ios.close();
 
-    logger.info("Image is optimized.");
+    logger.info(baos.size() + " Image is optimized. returning image :: " + baos.toString());
+
     // Return the optimized image as an input stream
     return new ByteArrayInputStream(baos.toByteArray());
   }
