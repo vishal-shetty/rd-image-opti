@@ -82,6 +82,7 @@ public class ThumbnailFunction {
     logger.info("file extension is :: " + ext);
 
     String compressionQuality = System.getenv("COMPRESSION_QUALITY"); // 0.75f
+    logger.info("compressionQuality :: " + compressionQuality);
 
     // Get the image writer for the JPEG format
     Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(ext);
@@ -94,7 +95,7 @@ public class ThumbnailFunction {
     // Set the image write parameters to optimize the image quality
     ImageWriteParam writeParam = writer.getDefaultWriteParam();
     writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-    writeParam.setCompressionQuality(Float.valueOf(compressionQuality)); // Adjust the quality setting as needed
+    writeParam.setCompressionQuality(0.8f); // Adjust the quality setting as needed
 
     // Write the optimized image to the output stream
     writer.setOutput(ios);
