@@ -1,5 +1,7 @@
 package com.function.java;
 
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -57,11 +59,10 @@ public class ThumbnailFunction {
 
       // Logic for image optimization
       byte[] optimizeImage = optimizeImage(imgFile, fileName, logger, 0.8f);
-      logger.info("optimized image :: " + optimizeImage.toString());
 
       // uploading file logic
-      String thumbContainer = System.getenv("THUMB_CONTAINER");
-      storeFile(fileName, optimizeImage, 0, contentType, imgConnectionStr, thumbContainer, logger);
+      String medContainer = System.getenv("MEDIUM_CONTAINER");
+      storeFile(fileName, optimizeImage, 0, contentType, imgConnectionStr, medContainer, logger);
 
     } catch (Exception e) {
       logger.severe("Error processing event: " + e.getMessage());
@@ -70,6 +71,32 @@ public class ThumbnailFunction {
 
   public byte[] optimizeImage(byte[] imageData, String fileName, Logger logger, float quality) throws IOException {
     BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageData));
+    int targetWidth = 1920; // Set your desired width
+    int targetHeight = 1080; // Set your desired height
+    int width = originalImage.getWidth();
+    int height = originalImage.getHeight();
+    if (width <= targetWidth && height <= targetHeight) {
+      logger.info("returning from here no need to resize or compress the image");
+      return imageData;
+    }
+
+    // Calculate the aspect ratio
+    double aspectRatio = (double) width / height;
+
+    // Determine the new dimensions while maintaining aspect ratio
+    int newWidth = targetWidth;
+    int newHeight = (int) (targetWidth / aspectRatio);
+
+    if (newHeight > targetHeight) {
+      newHeight = targetHeight;
+      newWidth = (int) (targetHeight * aspectRatio);
+    }
+
+    logger.info("Original Image aspect ratio :: " + width + "x" + height + " after calculating aspect ratio it is :: "
+        + newWidth + "x" + newHeight);
+
+    logger.info("need to resize and compress the image");
+    Image scaledImage = scaleImage(newWidth, newHeight, originalImage);
 
     // Create an output stream for the compressed image
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -80,13 +107,15 @@ public class ThumbnailFunction {
     ImageWriter writer = ImageIO.getImageWritersByFormatName(fileExtension).next();
     ImageWriteParam writeParam = writer.getDefaultWriteParam();
     writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-    writeParam.setCompressionQuality(0.7f); // 0.0f (max compression) to 1.0f (max quality)
+    writeParam.setCompressionQuality(0.8f); // 0.0f (max compression) to 1.0f (max quality)
 
     // Write the compressed image to the output stream
     writer.setOutput(ImageIO.createImageOutputStream(outputStream));
-    writer.write(null, new IIOImage((BufferedImage) originalImage, null, null), writeParam);
+    // I think this will strip metadata of that image as we are passing null here.
+    writer.write(null, new IIOImage((BufferedImage) scaledImage, null, null), writeParam);
     writer.dispose();
 
+    logger.info("resize and compress of the image is completed");
     return outputStream.toByteArray();
   }
 
@@ -136,5 +165,15 @@ public class ThumbnailFunction {
       logger.severe("Error uploading file : " + uploadWithResponse);
     }
   }
+
+  private static BufferedImage scaleImage(int targetWidth, int targetHeight, BufferedImage originalImage) {
+    int type = originalImage.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : originalImage.getType();
+    BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, type);
+    Graphics2D g = resizedImage.createGraphics();
+    g.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
+    g.dispose();
+    return resizedImage;
+  }
+
 
 }
