@@ -112,7 +112,7 @@ public class ThumbnailFunction {
     ImageWriter writer = ImageIO.getImageWritersByFormatName(fileExtension).next();
     ImageWriteParam writeParam = writer.getDefaultWriteParam();
     writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-    writeParam.setCompressionQuality(isForThumbnail ? 1.0f : 0.8f); // 0.0f (max compression) to 1.0f (max quality)
+    writeParam.setCompressionQuality(isForThumbnail ? 0.0f : 0.8f); // 0.0f (max compression) to 1.0f (max quality)
 
     // Write the compressed image to the output stream
     writer.setOutput(ImageIO.createImageOutputStream(outputStream));
