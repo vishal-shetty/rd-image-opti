@@ -57,22 +57,26 @@ public class ThumbnailFunction {
       byte[] imgFile = downloadFile(fileName, container, imgConnectionStr, logger);
       logger.info("file is downloaded here");
 
-      // Logic for image optimization
-      byte[] optimizeImage = optimizeImage(imgFile, fileName, logger, 0.8f);
-
+      // Logic for image resize and compression
+      byte[] optimizeImage = optimizeImage(imgFile, fileName, logger, 0.8f, 1920, 1080, false);
       // uploading file logic
       String medContainer = System.getenv("MEDIUM_CONTAINER");
       storeFile(fileName, optimizeImage, 0, contentType, imgConnectionStr, medContainer, logger);
 
+      // logic for thumbnail only resize the image
+      String thumbContainer = System.getenv("THUMB_CONTAINER");
+      byte[] thumbImage = optimizeImage(imgFile, fileName, logger, 0.0f, 200, 200, true);
+      storeFile(fileName, thumbImage, 0, contentType, imgConnectionStr, thumbContainer, logger);
+
     } catch (Exception e) {
       logger.severe("Error processing event: " + e.getMessage());
     }
+
   }
 
-  public byte[] optimizeImage(byte[] imageData, String fileName, Logger logger, float quality) throws IOException {
+  public byte[] optimizeImage(byte[] imageData, String fileName, Logger logger, float quality, int targetWidth,
+      int targetHeight, boolean isForThumbnail) throws IOException {
     BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageData));
-    int targetWidth = 1920; // Set your desired width
-    int targetHeight = 1080; // Set your desired height
     int width = originalImage.getWidth();
     int height = originalImage.getHeight();
     if (width <= targetWidth && height <= targetHeight) {
@@ -92,7 +96,8 @@ public class ThumbnailFunction {
       newWidth = (int) (targetHeight * aspectRatio);
     }
 
-    logger.info("Original Image aspect ratio :: " + width + "x" + height + " after calculating aspect ratio it is :: "
+    logger.info("target width x height is " + targetWidth + "x" + targetHeight + " and Original Image aspect ratio :: "
+        + width + "x" + height + " after calculating aspect ratio it is :: "
         + newWidth + "x" + newHeight);
 
     logger.info("need to resize and compress the image");
@@ -107,7 +112,7 @@ public class ThumbnailFunction {
     ImageWriter writer = ImageIO.getImageWritersByFormatName(fileExtension).next();
     ImageWriteParam writeParam = writer.getDefaultWriteParam();
     writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-    writeParam.setCompressionQuality(0.8f); // 0.0f (max compression) to 1.0f (max quality)
+    writeParam.setCompressionQuality(isForThumbnail ? 1.0f : 0.8f); // 0.0f (max compression) to 1.0f (max quality)
 
     // Write the compressed image to the output stream
     writer.setOutput(ImageIO.createImageOutputStream(outputStream));
@@ -135,8 +140,6 @@ public class ThumbnailFunction {
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     blobClient.downloadStream(os);
     return os.toByteArray();
-    // logger.info("returning input stream");
-    // return is;
   }
 
   private BlobContainerClient containerClient(String connectionstring, String containerName, Logger logger) {
@@ -174,6 +177,5 @@ public class ThumbnailFunction {
     g.dispose();
     return resizedImage;
   }
-
 
 }
