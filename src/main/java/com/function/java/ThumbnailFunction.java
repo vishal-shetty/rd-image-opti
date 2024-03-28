@@ -4,14 +4,11 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Iterator;
 import java.util.logging.Logger;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageOutputStream;
 import com.azure.core.http.rest.Response;
 import com.azure.core.util.BinaryData;
 import com.azure.core.util.Context;
@@ -55,78 +52,42 @@ public class ThumbnailFunction {
       String imgConnectionStr = System.getenv("AzureWebJobsStorage");
       String container = System.getenv("IMAGE_CONTAINER");
       logger.info("images connection string :: " + imgConnectionStr + " container :: " + container);
-      InputStream imgFile = downloadFile(fileName, container, imgConnectionStr, logger);
+      byte[] imgFile = downloadFile(fileName, container, imgConnectionStr, logger);
       logger.info("file is downloaded here");
 
       // Logic for image optimization
-      InputStream optimizeImage = optimizeImage(imgFile, fileName, logger);
+      byte[] optimizeImage = optimizeImage(imgFile, fileName, logger, 0.8f);
       logger.info("optimized image :: " + optimizeImage.toString());
-      long optimizedImageContentLength = getOptimizedImageContentLength(optimizeImage);
-      logger.info("optimizedImageContentLength :: " + optimizedImageContentLength);
 
       // uploading file logic
       String thumbContainer = System.getenv("THUMB_CONTAINER");
-      storeFile(fileName, optimizeImage, optimizedImageContentLength, contentType, imgConnectionStr, thumbContainer,
-          logger);
+      storeFile(fileName, optimizeImage, 0, contentType, imgConnectionStr, thumbContainer, logger);
 
     } catch (Exception e) {
       logger.severe("Error processing event: " + e.getMessage());
     }
   }
 
-  public InputStream optimizeImage(InputStream imageInputStream, String fileName, Logger logger) throws IOException {
-    // Read the image from the input stream
-    BufferedImage image = ImageIO.read(imageInputStream);
+  public byte[] optimizeImage(byte[] imageData, String fileName, Logger logger, float quality) throws IOException {
+    BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageData));
 
-    // get file extension
-    String ext = getFileExtension(fileName);
-    logger.info("file extension is :: " + ext);
+    // Create an output stream for the compressed image
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-    String compressionQuality = System.getenv("COMPRESSION_QUALITY"); // 0.75f
-    logger.info("compressionQuality :: " + compressionQuality);
-
-    // Get the image writer for the JPEG format
-    Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(ext);
-    ImageWriter writer = writers.next();
-
-    // Create a new image output stream to store the optimized image
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ImageOutputStream ios = ImageIO.createImageOutputStream(baos);
-
-    // Set the image write parameters to optimize the image quality
+    String fileExtension = getFileExtension(fileName);
+    logger.info("fileExtension :: " + fileExtension);
+    // Get the writer
+    ImageWriter writer = ImageIO.getImageWritersByFormatName(fileExtension).next();
     ImageWriteParam writeParam = writer.getDefaultWriteParam();
     writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-    writeParam.setCompressionQuality(Float.valueOf(compressionQuality)); // Adjust the quality setting as needed
+    writeParam.setCompressionQuality(0.7f); // 0.0f (max compression) to 1.0f (max quality)
 
-    // Write the optimized image to the output stream
-    writer.setOutput(ios);
-    writer.write(null, new IIOImage(image, null, null), writeParam);
-
-    // Close the image writer and output stream
+    // Write the compressed image to the output stream
+    writer.setOutput(ImageIO.createImageOutputStream(outputStream));
+    writer.write(null, new IIOImage((BufferedImage) originalImage, null, null), writeParam);
     writer.dispose();
-    ios.close();
 
-    logger.info(baos.size() + " Image is optimized. returning image :: " + baos.toString());
-
-    // Return the optimized image as an input stream
-    return new ByteArrayInputStream(baos.toByteArray());
-  }
-
-  public long getOptimizedImageContentLength(InputStream imageStream) throws IOException {
-    // Get the content length of the optimized image
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    byte[] buffer = new byte[1024];
-    int bytesRead;
-    while ((bytesRead = imageStream.read(buffer)) != -1) {
-      baos.write(buffer, 0, bytesRead);
-    }
-    long contentLength = baos.size();
-
-    // Close the output stream
-    baos.close();
-
-    // Return the content length
-    return contentLength;
+    return outputStream.toByteArray();
   }
 
   private String getFileExtension(String fileName) {
@@ -138,15 +99,15 @@ public class ThumbnailFunction {
     return extension;
   }
 
-  public InputStream downloadFile(String blobitem, String containerName, String connectionstring, Logger logger) {
+  public byte[] downloadFile(String blobitem, String containerName, String connectionstring, Logger logger) {
     logger.info("creating connection");
     BlobContainerClient containerClient = containerClient(connectionstring, containerName, logger);
     BlobClient blobClient = containerClient.getBlobClient(blobitem);
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     blobClient.downloadStream(os);
-    InputStream is = new ByteArrayInputStream(os.toByteArray());
-    logger.info("returning input stream");
-    return is;
+    return os.toByteArray();
+    // logger.info("returning input stream");
+    // return is;
   }
 
   private BlobContainerClient containerClient(String connectionstring, String containerName, Logger logger) {
@@ -157,13 +118,14 @@ public class ThumbnailFunction {
     return blobContainer;
   }
 
-  public void storeFile(String filename, InputStream content, long length, String contentType,
-      String connectionstring, String containerName, Logger logger) {
-    logger.info("Azure store file BEGIN " + filename);
+  public void storeFile(String filename, byte[] content, long length, String contentType, String connectionstring,
+      String containerName, Logger logger) {
+    logger.info("Azure store file BEGIN " + filename + " length :: " + length + " contentType ::" + contentType
+        + " containerName :: " + containerName);
     BlobClient client = containerClient(connectionstring, containerName, logger).getBlobClient(filename);
 
     BlobHttpHeaders jsonHeaders = new BlobHttpHeaders().setContentType(contentType);
-    BinaryData data = BinaryData.fromStream(content, length);
+    BinaryData data = BinaryData.fromBytes(content);
     BlobParallelUploadOptions options =
         new BlobParallelUploadOptions(data).setRequestConditions(new BlobRequestConditions()).setHeaders(jsonHeaders);
     Response<BlockBlobItem> uploadWithResponse = client.uploadWithResponse(options, null, Context.NONE);
