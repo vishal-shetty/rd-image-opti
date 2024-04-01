@@ -79,7 +79,7 @@ public class ThumbnailFunction {
 
       // logic for thumbnail only resize the image
       String thumbContainer = System.getenv("THUMB_CONTAINER");
-      byte[] thumbImage = resizeImage(imgFile, 200, 200, ext);
+      byte[] thumbImage = resizeImage(imgFile, 300, 300, ext);
       storeFile(fileName, thumbImage, contentType, imgConnectionStr, thumbContainer, logger);
 
     } catch (Exception e) {
