@@ -45,7 +45,7 @@ public class ThumbnailFunction {
   @FunctionName("BlobTriggerFunction")
   public void run(@EventGridTrigger(name = "event") String event, final ExecutionContext context) {
     Logger logger = context.getLogger();
-    final List<String> validImgExt = Arrays.asList("JPG", "JPEG", "PNG", "JFIF", "TIFF", "TIF", "BMP");
+    final List<String> validImgExt = Arrays.asList("JPG", "JPEG", "PNG", "JFIF", "TIFF", "TIF", "BMP", "WEBP");
     final List<String> validVdoExt = Arrays.asList("MP4", "MOV", "3GPP", "3GP");
     try {
 
