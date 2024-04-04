@@ -39,6 +39,8 @@ import io.github.techgnious.dto.IVAudioAttributes;
 import io.github.techgnious.dto.IVSize;
 import io.github.techgnious.dto.IVVideoAttributes;
 import io.github.techgnious.dto.VideoFormats;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 public class ThumbnailFunction {
 
@@ -139,6 +141,10 @@ public class ThumbnailFunction {
 
     } catch (Exception e) {
       logger.severe("Error processing event: " + e.getMessage());
+      StringWriter sw = new StringWriter();
+      PrintWriter pw = new PrintWriter(sw);
+      e.printStackTrace(pw);
+      logger.severe(sw.toString());
     }
 
   }
