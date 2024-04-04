@@ -190,7 +190,7 @@ public class ThumbnailFunction {
     if (ifd0Directory != null) {
       index = ifd0Directory.getInteger(ExifIFD0Directory.TAG_ORIENTATION);
     }
-    return index;
+    return index == null ? 1 : index;
   }
 
   public byte[] resizeImage(byte[] inputImage, int targetWidth, int targetHeight, String ext) throws IOException {
