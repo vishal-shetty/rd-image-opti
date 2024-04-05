@@ -6,6 +6,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -39,8 +41,6 @@ import io.github.techgnious.dto.IVAudioAttributes;
 import io.github.techgnious.dto.IVSize;
 import io.github.techgnious.dto.IVVideoAttributes;
 import io.github.techgnious.dto.VideoFormats;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 public class ThumbnailFunction {
 
@@ -90,6 +90,17 @@ public class ThumbnailFunction {
         logger.info("processing images file here, containerName :: " + container);
         byte[] imgFile = downloadFile(fileName, container, connectionStr, logger);
         logger.info("image file is downloaded here");
+
+        String oldExt = ext;
+        List<String> extForConversion = Arrays.asList("PNG", "GFIF", "WEBP");
+        if (extForConversion.contains(ext.toUpperCase())) {
+          logger.info("converting image to jpg");
+          imgFile = getConvertedImg(imgFile, "JPG");
+          ext = "jpg";
+          fileName = fileName.replace(oldExt, ext);
+          System.out.println("image is successfully converted to jpg");
+        }
+
 
         // Rotate the image based on the EXIF orientation
         int exifOrientation = getExifOrientation(imgFile);
@@ -147,6 +158,13 @@ public class ThumbnailFunction {
       logger.severe(sw.toString());
     }
 
+  }
+
+  private byte[] getConvertedImg(byte[] imgFile, String format) throws IOException {
+    BufferedImage image = ImageIO.read(new ByteArrayInputStream(imgFile));
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    ImageIO.write(image, format, outputStream);
+    return outputStream.toByteArray();
   }
 
   private static byte[] rotateImage(byte[] originalImage, int orientation, String ext) throws IOException {
