@@ -49,6 +49,8 @@ public class ThumbnailFunction {
     Logger logger = context.getLogger();
     final List<String> validImgExt = Arrays.asList("JPG", "JPEG", "PNG", "JFIF", "TIFF", "TIF", "BMP", "WEBP");
     final List<String> validVdoExt = Arrays.asList("MP4", "MOV", "3GPP", "3GP");
+    String originalFileName = null, fileContainerName = null, connectionString = null;
+    boolean isSuccess = true;
     try {
 
       ObjectMapper mapper = new ObjectMapper();
@@ -74,19 +76,21 @@ public class ThumbnailFunction {
       String contentType = dataNode.get("contentType").asText();
       String contentLength = dataNode.get("contentLength").asText();
       String fileName = fileUrl.substring(fileUrl.lastIndexOf('/') + 1, fileUrl.length());
-
+      originalFileName = fileName;
       // logging details
       logger.info("Uploaded File URL :: " + fileUrl);
       logger.info("Uploaded File ContentType :: " + contentType);
       logger.info("Uploaded File contentLength :: " + contentLength);
       logger.info("Uploaded File FileName :: " + fileName);
       String connectionStr = System.getenv("AzureWebJobsStorage");
+      connectionString = connectionStr;
       String ext = getFileExtension(fileName);
       logger.info("file extension :: " + ext);
 
       // now check here the extension of the file video/image
       if (validImgExt.contains(ext.toUpperCase())) {
         String container = System.getenv("IMAGE_CONTAINER");
+        fileContainerName = container;
         logger.info("processing images file here, containerName :: " + container);
         byte[] imgFile = downloadFile(fileName, container, connectionStr, logger);
         logger.info("image file is downloaded here");
@@ -101,7 +105,7 @@ public class ThumbnailFunction {
           logger.info("image is successfully converted to jpg");
           contentType = "image/jpg";
         }
-        logger.info("contentType before uploading "+contentType);
+        logger.info("contentType before uploading " + contentType);
 
         // Rotate the image based on the EXIF orientation
         int exifOrientation = getExifOrientation(imgFile);
@@ -122,6 +126,7 @@ public class ThumbnailFunction {
       } 
       else if (validVdoExt.contains(ext.toUpperCase())) {
         String container = System.getenv("VIDEO_CONTAINER");
+        fileContainerName = container;
         logger.info("processing video file here, containerName :: " + container);
         byte[] videoFile = downloadFile(fileName, container, connectionStr, logger);
         logger.info("video file is downloaded here");
@@ -153,13 +158,29 @@ public class ThumbnailFunction {
 
     } catch (Exception e) {
       logger.severe("Error processing event: " + e.getMessage());
+      isSuccess = false;
       StringWriter sw = new StringWriter();
       PrintWriter pw = new PrintWriter(sw);
       e.printStackTrace(pw);
       logger.severe(sw.toString());
+    } finally {
+      if (isSuccess) {
+        // we need to delete the original file
+        deleteBlobFile(connectionString, fileContainerName, originalFileName, logger);
+      } else {
+        logger.info("there is exception so cant delete the file");
+      }
     }
-
   }
+
+  private void deleteBlobFile(String connectionString, String containerName, String blobName, Logger logger) {
+    logger.info("deleting file " + blobName+ " from container :: "+containerName);
+    BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(connectionString).buildClient();
+    BlobClient blobClient = blobServiceClient.getBlobContainerClient(containerName).getBlobClient(blobName);
+    blobClient.delete();
+    logger.info("Blob file deleted successfully!");
+  }
+
 
   private byte[] getConvertedImg(byte[] imgFile, String format) throws IOException {
     BufferedImage image = ImageIO.read(new ByteArrayInputStream(imgFile));
