@@ -230,13 +230,18 @@ public class ThumbnailFunction {
     return out.toByteArray();
   }
 
-  private static int getExifOrientation(byte[] image) throws IOException, ImageProcessingException {
-    Metadata metadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(image));
-    // Get the first directory with orientation information
-    ExifIFD0Directory ifd0Directory = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+  private static int getExifOrientation(byte[] image) {
+    Metadata metadata;
     Integer index = 1;
-    if (ifd0Directory != null) {
-      index = ifd0Directory.getInteger(ExifIFD0Directory.TAG_ORIENTATION);
+    try {
+      metadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(image));
+      // Get the first directory with orientation information
+      ExifIFD0Directory ifd0Directory = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+      if (ifd0Directory != null) {
+        index = ifd0Directory.getInteger(ExifIFD0Directory.TAG_ORIENTATION);
+      }
+    } catch (ImageProcessingException | IOException e) {
+      index = 1;
     }
     return index == null ? 1 : index;
   }
