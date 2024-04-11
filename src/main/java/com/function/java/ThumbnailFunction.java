@@ -41,6 +41,7 @@ import io.github.techgnious.dto.IVAudioAttributes;
 import io.github.techgnious.dto.IVSize;
 import io.github.techgnious.dto.IVVideoAttributes;
 import io.github.techgnious.dto.VideoFormats;
+import io.github.techgnious.exception.VideoException;
 
 public class ThumbnailFunction {
 
@@ -111,10 +112,9 @@ public class ThumbnailFunction {
         // Rotate the image based on the EXIF orientation
         int exifOrientation = getExifOrientation(imgFile);
         logger.info("file exifOrientation value :: " + exifOrientation);
-        if(exifOrientation != 1){
-          byte[] rotatedImage = rotateImage(imgFile, exifOrientation, ext);
-          imgFile = rotatedImage;
-        }
+        byte[] rotatedImage = rotateImage(imgFile, exifOrientation, ext);
+        imgFile = rotatedImage;
+
         // Logic for image resize and compression
         byte[] optimizeImage = optimizeImage(imgFile, logger, 1920, 1080, ext);
         // uploading file logic
@@ -133,26 +133,17 @@ public class ThumbnailFunction {
         byte[] videoFile = downloadFile(fileName, container, connectionStr, logger);
         logger.info("video file is downloaded here");
 
-        IVCompressor compressor = new IVCompressor();
-        IVSize customRes = new IVSize();
-        customRes.setWidth(400);
-        customRes.setHeight(300);
-        IVAudioAttributes audioAttribute = new IVAudioAttributes();
-        // here 64kbit/s is 64000
-        audioAttribute.setBitRate(64000);
-        audioAttribute.setChannels(2);
-        audioAttribute.setSamplingRate(44100);
-
-        IVVideoAttributes videoAttribute = new IVVideoAttributes();
-        // Here 160 kbps video is 160000
-        videoAttribute.setBitRate(160000);
-        // More the frames more quality and size, but keep it low based on //devices like mobile
-        videoAttribute.setFrameRate(15);
-        videoAttribute.setSize(customRes);
-        byte[] output =
-            compressor.encodeVideoWithAttributes(videoFile, VideoFormats.MP4, audioAttribute, videoAttribute);
-        String v1FileName = "v1_" + fileName;
-        storeFile(v1FileName, output, contentType, connectionStr, container, logger);
+        String vidContainer = System.getenv("VIDEO_OPTIMISED_CONTAINER");
+        byte[] video720p = convertTo720p(videoFile);
+        int extStart = fileName.lastIndexOf('.');
+        String storeFileId = fileName.substring(0, extStart);
+        logger.info("got filename :: " + storeFileId);
+        String ver1 = storeFileId + "ver1.mp4";
+        storeFile(ver1, video720p, "video/mp4", connectionStr, vidContainer, logger);
+        byte[] video1080p = convertTo1080p(videoFile);
+        String ver2 = storeFileId + "ver2.mp4";
+        storeFile(ver2, video1080p, "video/mp4", connectionStr, vidContainer, logger);
+        logger.info("file upload is completed");
 
       } else {
         logger.info("invalid file format.");
@@ -174,6 +165,54 @@ public class ThumbnailFunction {
         logger.info("there is exception so cant delete the file");
       }
     }
+  }
+
+  private byte[] convertTo720p(byte[] videoFile) throws VideoException {
+    IVCompressor compressor = new IVCompressor();
+    IVSize customRes = new IVSize();
+    customRes.setWidth(1280);
+    customRes.setHeight(720);
+    IVAudioAttributes audioAttribute = new IVAudioAttributes();
+    // For good audio quality, a bit rate of 64 kbps to 128 kbps is common.
+    audioAttribute.setBitRate(64000);
+    // These settings depend on your original audio. For stereo audio, keep the channels at 2, and the
+    // sampling rate at 44.1 kHz (typical for audio files).
+    audioAttribute.setChannels(2);
+    audioAttribute.setSamplingRate(44100);
+
+    IVVideoAttributes videoAttribute = new IVVideoAttributes();
+    // For 720p, a bit rate of around 2 Mbps to 4 Mbps is common
+    videoAttribute.setBitRate(2000000); // 2Mbps
+
+    // For 720p, a frame rate of 24 to 30 frames per second (fps) is typical.
+    videoAttribute.setFrameRate(30); // 30fps
+    videoAttribute.setSize(customRes);
+    byte[] output = compressor.encodeVideoWithAttributes(videoFile, VideoFormats.MP4, audioAttribute, videoAttribute);
+    return output;
+  }
+
+  private byte[] convertTo1080p(byte[] videoFile) throws VideoException {
+    IVCompressor compressor = new IVCompressor();
+    IVSize customRes = new IVSize();
+    customRes.setWidth(1920);
+    customRes.setHeight(1080);
+    IVAudioAttributes audioAttribute = new IVAudioAttributes();
+    // For good audio quality, a bit rate of 64 kbps to 128 kbps is common.
+    audioAttribute.setBitRate(64000);
+    // These settings depend on your original audio. For stereo audio, keep the channels at 2, and the
+    // sampling rate at 44.1 kHz (typical for audio files).
+    audioAttribute.setChannels(2);
+    audioAttribute.setSamplingRate(44100);
+
+    IVVideoAttributes videoAttribute = new IVVideoAttributes();
+    // For 1080p, a bit rate of around 4 Mbps to 8 Mbps is common.
+    videoAttribute.setBitRate(6000000); // 6Mbps
+
+    // For 720p, a frame rate of 24 to 30 frames per second (fps) is typical.
+    videoAttribute.setFrameRate(30); // 30fps
+    videoAttribute.setSize(customRes);
+    byte[] output = compressor.encodeVideoWithAttributes(videoFile, VideoFormats.MP4, audioAttribute, videoAttribute);
+    return output;
   }
 
   private void deleteBlobFile(String connectionString, String containerName, String blobName, Logger logger) {
