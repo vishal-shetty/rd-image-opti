@@ -66,6 +66,7 @@ public class ThumbnailFunction {
       }
 
       if (!"PutBlob".equals(eventName)) {
+        isSuccess = false;
         logger.info(eventName + " :: Event is not for blob created so can be ignored");
         return;
       }
@@ -154,6 +155,7 @@ public class ThumbnailFunction {
 
       } else {
         logger.info("invalid file format.");
+        isSuccess = false;
       }
 
     } catch (Exception e) {
