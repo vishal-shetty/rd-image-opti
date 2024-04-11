@@ -98,9 +98,10 @@ public class ThumbnailFunction {
           imgFile = getConvertedImg(imgFile, "JPG");
           ext = "jpg";
           fileName = fileName.replace(oldExt, ext);
-          System.out.println("image is successfully converted to jpg");
+          logger.info("image is successfully converted to jpg");
+          contentType = "image/jpg";
         }
-
+        logger.info("contentType before uploading "+contentType);
 
         // Rotate the image based on the EXIF orientation
         int exifOrientation = getExifOrientation(imgFile);
