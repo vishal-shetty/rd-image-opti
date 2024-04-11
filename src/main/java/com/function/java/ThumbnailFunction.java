@@ -99,12 +99,12 @@ public class ThumbnailFunction {
         String oldExt = ext;
         List<String> extForConversion = Arrays.asList("PNG", "GFIF", "WEBP");
         if (extForConversion.contains(ext.toUpperCase())) {
-          logger.info("converting image to jpg");
-          imgFile = getConvertedImg(imgFile, "JPG");
-          ext = "jpg";
+          logger.info("converting image to jpeg");
+          imgFile = getConvertedImg(imgFile, "JPEG");
+          ext = "jpeg";
           fileName = fileName.replace(oldExt, ext);
-          logger.info("image is successfully converted to jpg");
-          contentType = "image/jpg";
+          logger.info("image is successfully converted to jpeg");
+          contentType = "image/jpeg";
         }
         logger.info("contentType before uploading " + contentType);
 
