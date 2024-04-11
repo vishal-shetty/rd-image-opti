@@ -111,9 +111,10 @@ public class ThumbnailFunction {
         // Rotate the image based on the EXIF orientation
         int exifOrientation = getExifOrientation(imgFile);
         logger.info("file exifOrientation value :: " + exifOrientation);
-        byte[] rotatedImage = rotateImage(imgFile, exifOrientation, ext);
-        imgFile = rotatedImage;
-
+        if(exifOrientation != 1){
+          byte[] rotatedImage = rotateImage(imgFile, exifOrientation, ext);
+          imgFile = rotatedImage;
+        }
         // Logic for image resize and compression
         byte[] optimizeImage = optimizeImage(imgFile, logger, 1920, 1080, ext);
         // uploading file logic
