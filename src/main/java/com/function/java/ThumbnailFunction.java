@@ -138,11 +138,11 @@ public class ThumbnailFunction {
         int extStart = fileName.lastIndexOf('.');
         String storeFileId = fileName.substring(0, extStart);
         logger.info("got filename :: " + storeFileId);
-        String ver1 = storeFileId + "ver1.mp4";
+        String ver1 = storeFileId + ".mp4";
         storeFile(ver1, video720p, "video/mp4", connectionStr, vidContainer, logger);
-        byte[] video1080p = convertTo1080p(videoFile);
-        String ver2 = storeFileId + "ver2.mp4";
-        storeFile(ver2, video1080p, "video/mp4", connectionStr, vidContainer, logger);
+ //       byte[] video1080p = convertTo1080p(videoFile);
+ //       String ver2 = storeFileId + "ver2.mp4";
+ //       storeFile(ver2, video1080p, "video/mp4", connectionStr, vidContainer, logger);
         logger.info("file upload is completed");
 
       } else {
