@@ -10,6 +10,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -24,6 +25,7 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.BlobRequestConditions;
 import com.azure.storage.blob.models.BlockBlobItem;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
@@ -130,21 +132,38 @@ public class ThumbnailFunction {
         String container = System.getenv("VIDEO_CONTAINER");
         fileContainerName = container;
         logger.info("processing video file here, containerName :: " + container);
-        byte[] videoFile = downloadFile(fileName, container, connectionStr, logger);
+
+        // download videoFile here and extract metadata as well
+        BlobContainerClient containerClient = containerClient(connectionStr, container, logger);
+        BlobClient blobClient = containerClient.getBlobClient(fileName);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        blobClient.downloadStream(os);
+        BlobProperties properties = blobClient.getProperties();
+        logger.info("file size " + properties.getBlobSize());
+        Map<String, String> metadata = properties.getMetadata();
+        for (String key : metadata.keySet()) {
+          logger.info("key::" + key + " value::" + metadata.get(key));
+        }
+        byte[] videoFile = os.toByteArray();
         logger.info("video file is downloaded here");
 
         String vidContainer = System.getenv("VIDEO_OPTIMISED_CONTAINER");
-        byte[] video720p = convertTo720p(videoFile);
-        int extStart = fileName.lastIndexOf('.');
-        String storeFileId = fileName.substring(0, extStart);
-        logger.info("got filename :: " + storeFileId);
-        String ver1 = storeFileId + ".mp4";
-        storeFile(ver1, video720p, "video/mp4", connectionStr, vidContainer, logger);
- //       byte[] video1080p = convertTo1080p(videoFile);
- //       String ver2 = storeFileId + "ver2.mp4";
- //       storeFile(ver2, video1080p, "video/mp4", connectionStr, vidContainer, logger);
-        logger.info("file upload is completed");
-
+        if (metadata.get("width") == null || metadata.get("height") == null) {
+          logger.info("can't process the file as metadata is not available.");
+          isSuccess = false;
+        } else {
+          byte[] video720p = convertTo720p(videoFile, Integer.valueOf(metadata.get("width")),
+              Integer.valueOf(metadata.get("height")), logger);
+          int extStart = fileName.lastIndexOf('.');
+          String storeFileId = fileName.substring(0, extStart);
+          logger.info("got filename :: " + storeFileId);
+          String ver1 = storeFileId + ".mp4";
+          storeFile(ver1, video720p, "video/mp4", connectionStr, vidContainer, logger);
+          // byte[] video1080p = convertTo1080p(videoFile);
+          // String ver2 = storeFileId + "ver2.mp4";
+          // storeFile(ver2, video1080p, "video/mp4", connectionStr, vidContainer, logger);
+          logger.info("file upload is completed");
+        }
       } else {
         logger.info("invalid file format.");
         isSuccess = false;
@@ -167,11 +186,15 @@ public class ThumbnailFunction {
     }
   }
 
-  private byte[] convertTo720p(byte[] videoFile) throws VideoException {
+  private byte[] convertTo720p(byte[] videoFile, int ogWidth, int ogHeight, Logger logger)
+      throws VideoException {
     IVCompressor compressor = new IVCompressor();
     IVSize customRes = new IVSize();
-    customRes.setWidth(1280);
-    customRes.setHeight(720);
+    int[] newDimesions = getNewDimesions(1280, 720, ogWidth, ogHeight);
+    logger.info("original dimension " + ogWidth + "x" + ogHeight + " and new dimensions :: " + newDimesions[0] + "x"
+        + newDimesions[1]);
+    customRes.setWidth(newDimesions[0]);
+    customRes.setHeight(newDimesions[1]);
     IVAudioAttributes audioAttribute = new IVAudioAttributes();
     // For good audio quality, a bit rate of 64 kbps to 128 kbps is common.
     audioAttribute.setBitRate(64000);
@@ -189,6 +212,30 @@ public class ThumbnailFunction {
     videoAttribute.setSize(customRes);
     byte[] output = compressor.encodeVideoWithAttributes(videoFile, VideoFormats.MP4, audioAttribute, videoAttribute);
     return output;
+  }
+
+  public int[] getNewDimesions(int targetWidth, int targetHeight, int ogWidth, int ogHeight) {
+    // check if original dimension is already in range
+    if (ogWidth <= targetWidth && ogHeight <= targetHeight) {
+      return new int[] {ogWidth, ogHeight};
+    }
+
+    // Calculate the aspect ratio
+    double aspectRatio = (double) ogWidth / ogHeight;
+
+    // Determine the new dimensions while maintaining aspect ratio
+    int newWidth = targetWidth;
+    int newHeight = (int) (targetWidth / aspectRatio);
+    System.out.println("aspectRatio :: " + aspectRatio);
+
+    if (newHeight > targetHeight) {
+      newHeight = targetHeight;
+      newWidth = (int) (targetHeight * aspectRatio);
+    }
+    // rounding off to nearest multiple of 10 for caculated new width and height
+    int roundedWidth = (Math.round(newWidth / 10)) * 10;
+    int roundedHeight = (Math.round(newHeight / 10)) * 10;
+    return new int[] {roundedWidth, roundedHeight};
   }
 
   private byte[] convertTo1080p(byte[] videoFile) throws VideoException {
