@@ -179,7 +179,8 @@ public class ThumbnailFunction {
     } finally {
       if (isSuccess) {
         // we need to delete the original file
-        deleteBlobFile(connectionString, fileContainerName, originalFileName, logger);
+        // deleteBlobFile(connectionString, fileContainerName, originalFileName, logger);
+        logger.info("delete the original file");
       } else {
         logger.info("there is exception so cant delete the file");
       }
