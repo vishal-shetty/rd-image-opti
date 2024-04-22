@@ -217,7 +217,7 @@ public class ThumbnailFunction {
     videoAttribute.setBitRate(2000000); // 2Mbps
 
     // For 720p, a frame rate of 24 to 30 frames per second (fps) is typical.
-    videoAttribute.setFrameRate(30); // 30fps
+    videoAttribute.setFrameRate(24); // 30fps
     videoAttribute.setSize(customRes);
     byte[] output = compressor.encodeVideoWithAttributes(videoFile, VideoFormats.MP4, audioAttribute, videoAttribute);
     return output;
