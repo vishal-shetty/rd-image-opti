@@ -181,7 +181,7 @@ public class ThumbnailFunction {
     } finally {
       if (isSuccess) {
         // we need to delete the original file
-        // deleteBlobFile(connectionString, fileContainerName, originalFileName, logger);
+        deleteBlobFile(connectionString, fileContainerName, originalFileName, logger);
         logger.info("delete the original file");
       } else {
         logger.info("there is exception so cant delete the file");
@@ -265,7 +265,7 @@ public class ThumbnailFunction {
     videoAttribute.setBitRate(6000000); // 6Mbps
 
     // For 720p, a frame rate of 24 to 30 frames per second (fps) is typical.
-    videoAttribute.setFrameRate(30); // 30fps
+    videoAttribute.setFrameRate(24); // 30fps
     videoAttribute.setSize(customRes);
     byte[] output = compressor.encodeVideoWithAttributes(videoFile, VideoFormats.MP4, audioAttribute, videoAttribute);
     return output;
