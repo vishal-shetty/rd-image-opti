@@ -93,8 +93,8 @@ public class ThumbnailFunction {
 
       // now check here the extension of the file video/image
       if (validImgExt.contains(ext.toUpperCase())) {
-        String suffix = getContainerSuffix(fileUrl, "-images/");
-        String container = suffix + "-images"; // System.getenv("IMAGE_CONTAINER");
+        // String suffix = getContainerSuffix(fileUrl, "-images/");
+        String container = "images"; // System.getenv("IMAGE_CONTAINER");
         fileContainerName = container;
         logger.info("processing images file here, containerName :: " + container);
         byte[] imgFile = downloadFile(fileName, container, connectionStr, logger);
@@ -121,17 +121,17 @@ public class ThumbnailFunction {
         // Logic for image resize and compression
         byte[] optimizeImage = optimizeImage(imgFile, logger, 1920, 1080, ext);
         // uploading file logic
-        String medContainer = suffix + "-medium"; // System.getenv("MEDIUM_CONTAINER");
+        String medContainer = "images-optimised"; // System.getenv("MEDIUM_CONTAINER");
         storeFile(fileName, optimizeImage, contentType, connectionStr, medContainer, logger);
 
         // logic for thumbnail only resize the image
-        String thumbContainer = suffix + "-thumbnails"; // System.getenv("THUMB_CONTAINER");
+        String thumbContainer = "images-thumbnails"; // System.getenv("THUMB_CONTAINER");
         byte[] thumbImage = resizeImage(imgFile, 200, 200, ext);
         storeFile(fileName, thumbImage, contentType, connectionStr, thumbContainer, logger);
       } 
       else if (validVdoExt.contains(ext.toUpperCase())) {
-        String suffix = getContainerSuffix(fileUrl, "-videos/");
-        String container = suffix + "-videos"; // System.getenv("VIDEO_CONTAINER");
+        // String suffix = getContainerSuffix(fileUrl, "-videos/");
+        String container = "videos"; // System.getenv("VIDEO_CONTAINER");
         fileContainerName = container;
         logger.info("processing video file here, containerName :: " + container);
 
@@ -149,7 +149,7 @@ public class ThumbnailFunction {
         byte[] videoFile = os.toByteArray();
         logger.info("video file is downloaded here");
 
-        String vidContainer = suffix + "-videos-optimised"; // System.getenv("VIDEO_OPTIMISED_CONTAINER");
+        String vidContainer = "videos-optimised"; // System.getenv("VIDEO_OPTIMISED_CONTAINER");
         if (metadata.get("width") == null || metadata.get("height") == null) {
           logger.info("can't process the file as metadata is not available.");
           isSuccess = false;
