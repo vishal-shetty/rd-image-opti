@@ -361,28 +361,30 @@ public class ThumbnailFunction {
     BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageData));
     int width = originalImage.getWidth();
     int height = originalImage.getHeight();
+    Image scaledImage = null;
+
     if (width <= targetWidth && height <= targetHeight) {
-      logger.info("returning from here no need to resize or compress the image");
-      return imageData;
+      logger.info("no need to resize but optimize the image");
+      scaledImage = originalImage;
+    } else {
+      // Calculate the aspect ratio
+      double aspectRatio = (double) width / height;
+
+      // Determine the new dimensions while maintaining aspect ratio
+      int newWidth = targetWidth;
+      int newHeight = (int) (targetWidth / aspectRatio);
+
+      if (newHeight > targetHeight) {
+        newHeight = targetHeight;
+        newWidth = (int) (targetHeight * aspectRatio);
+      }
+
+      logger.info("need to resize and compress the image");
+      logger.info("target width x height is " + targetWidth + "x" + targetHeight + " and Original Image aspect ratio :: "
+              + width + "x" + height + " after calculating aspect ratio it is :: " + newWidth + "x" + newHeight);
+
+      scaledImage = scaleImage(newWidth, newHeight, originalImage);
     }
-
-    // Calculate the aspect ratio
-    double aspectRatio = (double) width / height;
-
-    // Determine the new dimensions while maintaining aspect ratio
-    int newWidth = targetWidth;
-    int newHeight = (int) (targetWidth / aspectRatio);
-
-    if (newHeight > targetHeight) {
-      newHeight = targetHeight;
-      newWidth = (int) (targetHeight * aspectRatio);
-    }
-
-    logger.info("target width x height is " + targetWidth + "x" + targetHeight + " and Original Image aspect ratio :: "
-        + width + "x" + height + " after calculating aspect ratio it is :: " + newWidth + "x" + newHeight);
-
-    logger.info("need to resize and compress the image");
-    Image scaledImage = scaleImage(newWidth, newHeight, originalImage);
 
     // Create an output stream for the compressed image
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
